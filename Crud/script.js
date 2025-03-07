@@ -19,7 +19,21 @@ const inputTitle = document.getElementById('title');
 const inputDirector = document.getElementById('directorName');
 
 // Create button event
-document.getElementById("create").addEventListener('click', addData);
+document.getElementById("create").addEventListener('click', addData);{
+    addData()
+    backapi()
+
+}
+
+function backapi(){
+    fetch('http://127.0.0.1:8000/items/', {
+        method: 'POST',
+        body: JSON.stringify({ name:inputTitle.value, description: inputDirector.value }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+    });
+}
 
 // Function to add a new movie
 async function addData() {
@@ -47,14 +61,6 @@ async function addData() {
     } catch (error) {
         console.error("Error adding movie:", error);
     }
-
-    fetch('http://127.0.0.1:8000/items/', {
-        method: 'POST',
-        body: JSON.stringify({ name:inputTitle.value, description: inputDirector.value }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
-    });
 }
 
 // Display movies on the page
