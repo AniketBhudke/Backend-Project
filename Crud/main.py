@@ -1,57 +1,30 @@
-from fastapi import FastAPI, HTTPException, Depends
-from pydantic import BaseModel
+from db import Base, engine, get_db
+from models import Item
 from sqlalchemy.orm import Session
-from models import Base, Item, engine, get_db  # Import model and DB session
-from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+# Test database connection
+try:
+    with engine.connect() as connection:
+        result = connection.execute("SELECT 1")
+        print("Connection successful, result:", result.scalar())
+except Exception as e:
+    print("Error connecting to the database:", e)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods (GET, POST, PUT, DELETE, etc.)
-    allow_headers=["*"],  # Allows all headers
-)
-# Create the database tables (run only once)
-Base.metadata.create_all(bind=engine)
+# Initialize the database
+def init_db():
+    Base.metadata.create_all(bind=engine)
 
-# Pydantic model for request body
-class ItemCreate(BaseModel):
-    name: str
-    description: str
-
-@app.post("/items/")
-def create_item(item: ItemCreate, db: Session = Depends(get_db)):
-    db_item = Item(name=item.name, description=item.description)
-    db.add(db_item)
+# Example function to add an item (CRUD operation)
+def create_item(name: str, description: str, db: Session):
+    new_item = Item(name=name, description=description)
+    db.add(new_item)
     db.commit()
-    db.refresh(db_item)
-    return db_item
+    db.refresh(new_item)
+    return new_item
 
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, db: Session = Depends(get_db)):
-    db_item = db.query(Item).filter(Item.id == item_id).first()
-    if db_item is None:
-        raise HTTPException(status_code=404, detail="Item not found")
-    return db_item
-
-@app.put("/items/{item_id}")
-def update_item(item_id: int, name: str, description: str, db: Session = Depends(get_db)):
-    db_item = db.query(Item).filter(Item.id == item_id).first()
-    if db_item is None:
-        raise HTTPException(status_code=404, detail="Item not found")
-    db_item.name = name
-    db_item.description = description
-    db.commit()
-    return db_item
-
-@app.delete("/items/{item_id}")
-def delete_item(item_id: int, db: Session = Depends(get_db)):
-    db_item = db.query(Item).filter(Item.id == item_id).first()
-    if db_item is None:
-        raise HTTPException(status_code=404, detail="Item not found")
-    db.delete(db_item)
-    db.commit()
-    return {"message": "Item deleted"}
+# Example function to test item creation
+if __name__ == "__main__":
+    init_db()
+    db = next(get_db())
+    item = create_item(name="Sample Item", description="This is a test item", db=db)
+    print(f"Created item: {item.name} with ID {item.id}")
